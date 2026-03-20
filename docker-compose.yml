@@ -1,37 +1,24 @@
 version: '3.8'
-
 services:
-  nginx:
-    image: nginx
-    container_name: petereport_nginx
-    volumes:
-      - ./nginx:/opt/petereport/nginx
-      - ./nginx/petereport.conf:/etc/nginx/conf.d/petereport.conf
-      - ./app/petereport/static:/opt/petereport/app/petereport/static
-      - ./app/media:/opt/petereport/app/media
-    ports:
-      - 80:80
-      - 443:443
-    depends_on:
-      - petereport
-
   petereport:
     build:
       context: .
       dockerfile: ./Dockerfile
     image: petereport_django
     container_name: petereport_django
-    command: bash -c "
+    command: >
+      bash -c "
       sleep 1 &&
       pipenv install --deploy --ignore-pipfile --python 3.9 &&
-      pip freeze && 
+      pip freeze &&
       pipenv run ./app/manage.py makemigrations &&
       pipenv run ./app/manage.py migrate &&
       pipenv run ./app/manage.py loaddata ./app/config/cwe-list.json &&
       pipenv run ./app/manage.py loaddata ./app/config/owasp-list.json &&
-      pipenv run gunicorn --chdir ./app petereport.wsgi:application --timeout 120 --graceful-timeout 60 --bind 0.0.0.0:8000"
+      pipenv run gunicorn --chdir ./app petereport.wsgi:application --timeout 120 --graceful-timeout 60 --bind 0.0.0.0:8000
+      "
     volumes:
-      - .:/opt/petereport
+      - '.:/opt/petereport'
     expose:
       - 8000
     restart: unless-stopped
